@@ -1,8 +1,9 @@
-from flask import Flask, request, send_file
-import cv2
-import numpy as np
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import os
 
 app = Flask(__name__)
+CORS(app)
 
 @app.route("/")
 def home():
@@ -10,28 +11,24 @@ def home():
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
-
+    if 'file' not in request.files:
+        return jsonify({"result": "No image received"})
+    
     file = request.files['file']
-    img = cv2.imdecode(np.frombuffer(file.read(), np.uint8), cv2.IMREAD_COLOR)
+    
+    if file.filename == '':
+        return jsonify({"result": "No file selected"})
+    
+    # Save uploaded image
+    filepath = os.path.join("uploads", file.filename)
+    os.makedirs("uploads", exist_ok=True)
+    file.save(filepath)
 
-    h, w = img.shape[:2]
-
-    # center point
-    cx = w // 2
-    cy = h // 2
-
-    cv2.circle(img, (cx, cy), 10, (0,0,255), -1)
-
-    # draw 3x3 grid
-    for i in range(1,3):
-        cv2.line(img, (int(w*i/3),0), (int(w*i/3),h), (0,255,0), 2)
-        cv2.line(img, (0,int(h*i/3)), (w,int(h*i/3)), (0,255,0), 2)
-
-    output = "result.png"
-    cv2.imwrite(output, img)
-
-    return send_file(output, mimetype="image/png")
-
+    # Example response
+    return jsonify({
+        "result": "Image received and analyzed successfully"
+    })
 
 if __name__ == "__main__":
-    app.run()
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
