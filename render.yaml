@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: vastu-ai-server
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn server:app"
