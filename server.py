@@ -1,42 +1,37 @@
+from flask import Flask, request, send_file
 import cv2
 import numpy as np
-from flask import Flask, request, send_file
 
 app = Flask(__name__)
 
-@app.route('/analyze', methods=['POST'])
+@app.route("/")
+def home():
+    return "Vastu AI Server Running"
+
+@app.route("/analyze", methods=["POST"])
 def analyze():
 
     file = request.files['file']
+    img = cv2.imdecode(np.frombuffer(file.read(), np.uint8), cv2.IMREAD_COLOR)
 
-    image = cv2.imdecode(np.frombuffer(file.read(), np.uint8), 1)
+    h, w = img.shape[:2]
 
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # center point
+    cx = w // 2
+    cy = h // 2
 
-    edges = cv2.Canny(gray,50,150)
+    cv2.circle(img, (cx, cy), 10, (0,0,255), -1)
 
-    contours,_ = cv2.findContours(edges,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-
-    largest = max(contours,key=cv2.contourArea)
-
-    x,y,w,h = cv2.boundingRect(largest)
-
-    cv2.rectangle(image,(x,y),(x+w,y+h),(0,255,0),2)
-
-    cx = int(x+w/2)
-    cy = int(y+h/2)
-
-    cv2.circle(image,(cx,cy),6,(0,0,255),-1)
-
-    cell_w = int(w/3)
-    cell_h = int(h/3)
-
+    # draw 3x3 grid
     for i in range(1,3):
-        cv2.line(image,(x+i*cell_w,y),(x+i*cell_w,y+h),(255,0,0),2)
-        cv2.line(image,(x,y+i*cell_h),(x+w,y+i*cell_h),(255,0,0),2)
+        cv2.line(img, (int(w*i/3),0), (int(w*i/3),h), (0,255,0), 2)
+        cv2.line(img, (0,int(h*i/3)), (w,int(h*i/3)), (0,255,0), 2)
 
-    cv2.imwrite("result.png",image)
+    output = "result.png"
+    cv2.imwrite(output, img)
 
-    return send_file("result.png")
+    return send_file(output, mimetype="image/png")
 
-app.run(host="0.0.0.0", port=10000)
+
+if __name__ == "__main__":
+    app.run()
